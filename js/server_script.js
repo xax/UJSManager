@@ -422,6 +422,9 @@ var ScriptsDirectory = new function()
   var shared_scripts = ( getPref('shared_scripts') ? getPref('shared_scripts').split('|') : [] );
   // array of filepaths that are disabled
   var disabled_scripts = ( getPref('disabled_scripts') ? JSON.parse(getPref('disabled_scripts')) : [] );
+  var disabled_suffix = getPref('disabled_suffix')||'.xx';
+  var disabledext = new RegExp(disabled_suffix.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + '$', 'i'),
+      jsext = new RegExp('\\.js(' + disabled_suffix.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + '|)$', 'i');
 
   /**
     * Reads all user scripts in directory
@@ -455,8 +458,7 @@ var ScriptsDirectory = new function()
     }
 
     var
-      obj = null
-      ,jsext = /\.js(\.xx|)$/i;
+      obj = null;
     files_arr = [];
 
     for ( var i = 0, File; File = SHARED_DIR[i]; i++ )
@@ -475,7 +477,7 @@ var ScriptsDirectory = new function()
         continue;
       }
 
-      // skip if no js extension (or disabled - .xx)
+      // skip if no js extension (or disabled - $disabled_suffix) // XA modified
       if ( !(jsext.test(File.name)) ) continue;
 
       files_arr.push(File.path);
@@ -560,11 +562,11 @@ var ScriptsDirectory = new function()
   {
     var
       path = File.path.replace('mountpoint:/', '')
-      ,printpath = path.replace(/\.xx$/i, '');
+      ,printpath = path.replace(disabledext, '');
 
     var obj = {
-        prettyname  : unescape(File.name.replace(/\.xx$/i, '')),
-        printname   : unescape(File.name.replace(/\.xx$/i, '')),
+        prettyname  : unescape(File.name.replace(disabledext, '')),
+        printname   : unescape(File.name.replace(disabledext, '')),
         filename    : File.name,
         filepath    : path,
         printpath   : printpath,
@@ -655,7 +657,7 @@ var ScriptsDirectory = new function()
     if (!filename) return { error: 'No filename specified!' };
 
     // we share both disabled and enabled scripts using same filename
-    filename = filename.replace(/\.xx$/i, '');
+    filename = filename.replace(disabledext, '');
 
     if (/\bujs_manager_installer\.js/i.test(filename))
     {
@@ -677,7 +679,6 @@ var ScriptsDirectory = new function()
   {
     var is_dirty = false;
     var tmp = [];
-    var jsext = /\.js(\.xx|)$/i;
 
     SHARED_DIR.refresh();
 
@@ -726,16 +727,16 @@ var ScriptsDirectory = new function()
 
     if ( File && File.exists )
     {
-      if ( File.path.match(/\.js\.xx$/i) )
+      if ( File.path.match(new RegExp('\\.js' + disabled_suffix + '$', 'i')) )
       {
         // enable script
-        newpath = File.path.replace(/\.js\.xx$/i, '.js');
+        newpath = File.path.replace(jsext, '.js');
         enabled = true;
       }
       else if ( File.path.match(/\.js$/i) )
       {
         // disable script
-        newpath = File.path.replace(/\.js$/i, '.js.xx');
+        newpath = File.path.replace(/\.js$/i, '.js' + disabled_suffix);
         enabled = false;
       }
       else
